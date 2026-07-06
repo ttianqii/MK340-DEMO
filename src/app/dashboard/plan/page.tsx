@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/serverAuth";
 import { getSchedule } from "@/lib/scheduleQueries";
+import { decryptValue } from "@/lib/serverCrypto";
+import { fetchChecklist } from "@/lib/studentChecklist";
+import { recommendCourses } from "@/lib/recommendations";
+import { groupSections } from "@/lib/timetable";
 import DashboardHeader from "@/components/DashboardHeader";
 import PlanBuilder from "@/components/PlanBuilder";
 
@@ -11,6 +15,14 @@ export default async function PlanPage() {
   if (!session) redirect("/login");
 
   const schedule = getSchedule();
+
+  // Cross-reference the student's Study Plan with what's offered this term.
+  const cookies = session.ck ? decryptValue(session.ck) : null;
+  const checklist = cookies ? await fetchChecklist(cookies, session.url) : null;
+  const recommendations =
+    checklist && checklist.ok
+      ? recommendCourses(checklist.checklist, groupSections(schedule.slots))
+      : [];
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -36,7 +48,7 @@ export default async function PlanPage() {
             </p>
           </div>
         ) : (
-          <PlanBuilder data={schedule} />
+          <PlanBuilder data={schedule} recommendations={recommendations} />
         )}
       </main>
     </div>

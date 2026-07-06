@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { ScheduleData } from "@/lib/scheduleQueries";
+import type { RecommendedCourse } from "@/lib/recommendations";
 import {
   colorFor,
   formatMinutes,
@@ -28,7 +29,13 @@ function meetingLabel(s: PlanSection): string {
     .join("  •  ");
 }
 
-export default function PlanBuilder({ data }: { data: ScheduleData }) {
+export default function PlanBuilder({
+  data,
+  recommendations = [],
+}: {
+  data: ScheduleData;
+  recommendations?: RecommendedCourse[];
+}) {
   const allSections = useMemo(() => groupSections(data.slots), [data.slots]);
   const byKey = useMemo(() => new Map(allSections.map((s) => [s.key, s])), [allSections]);
 
@@ -73,6 +80,11 @@ export default function PlanBuilder({ data }: { data: ScheduleData }) {
     return set;
   }, [planned]);
 
+  const plannedCodes = useMemo(
+    () => new Set(planned.map((s) => s.courseCode)),
+    [planned]
+  );
+
   const add = (key: string) => setKeys((ks) => (ks.includes(key) ? ks : [...ks, key]));
   const remove = (key: string) => setKeys((ks) => ks.filter((k) => k !== key));
 
@@ -97,6 +109,50 @@ export default function PlanBuilder({ data }: { data: ScheduleData }) {
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           ⚠ Some classes overlap in time. Conflicting sections are outlined in red on the grid.
         </div>
+      ) : null}
+
+      {recommendations.length > 0 ? (
+        <section className="rounded-xl border border-blue-100 bg-blue-50/60 p-4">
+          <div className="mb-1 flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-blue-900">Recommended this term</h2>
+            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+              {recommendations.length}
+            </span>
+          </div>
+          <p className="mb-3 text-xs text-blue-800/80">
+            Courses from your Study Plan that you still need and that are offered this term. Click one
+            to find its sections.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {recommendations.map((r) => {
+              const inPlan = plannedCodes.has(r.code);
+              return (
+                <button
+                  key={r.code}
+                  type="button"
+                  onClick={() => setQuery(r.code)}
+                  title={`${r.name}\n${r.category}${r.grade ? `\nprevious grade: ${r.grade}` : ""}\n${r.sectionCount} section${r.sectionCount === 1 ? "" : "s"} offered`}
+                  className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-left text-sm transition-colors ${
+                    inPlan
+                      ? "border-green-200 bg-green-50 text-green-800"
+                      : "border-blue-200 bg-white text-gray-800 hover:border-blue-400 hover:bg-blue-50"
+                  }`}
+                >
+                  <span className="font-mono font-semibold">{r.code}</span>
+                  <span className="max-w-[10rem] truncate text-xs text-gray-500">{r.name}</span>
+                  {r.grade ? (
+                    <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-medium text-amber-700">
+                      {/^W$/i.test(r.grade) ? "withdrawn (W)" : `retake ${r.grade}`}
+                    </span>
+                  ) : null}
+                  <span className="text-xs text-gray-400">
+                    {inPlan ? "✓ in plan" : `${r.sectionCount}§`}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
       ) : null}
 
       <div className="grid gap-6 md:grid-cols-2">
