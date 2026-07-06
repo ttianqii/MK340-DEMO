@@ -52,7 +52,13 @@ function assignLanes(items: Omit<Placed, "lane" | "conflict">[]): Placed[] {
   return placed;
 }
 
-export default function TimetableGrid({ sections }: { sections: PlanSection[] }) {
+export default function TimetableGrid({
+  sections,
+  conflictKeys,
+}: {
+  sections: PlanSection[];
+  conflictKeys?: Set<string>;
+}) {
   const { start, end, ticks, rows } = useMemo(() => {
     const allMeetings = sections.flatMap((s) => s.meetings);
     const minStart = allMeetings.length ? Math.min(...allMeetings.map((m) => m.startMin)) : 540;
@@ -130,10 +136,16 @@ export default function TimetableGrid({ sections }: { sections: PlanSection[] })
                 {/* Class blocks */}
                 {placed.map((p, i) => {
                   const color = colorFor(p.section.key);
+                  // When the parent supplies conflict keys (time + duplicate
+                  // course), let them drive the outline; otherwise fall back to
+                  // this grid's own time-overlap detection.
+                  const isConflict = conflictKeys
+                    ? conflictKeys.has(p.section.key)
+                    : p.conflict;
                   return (
                     <div
                       key={i}
-                      title={`${p.section.courseCode}${p.section.section ? ` (${p.section.section})` : ""} · ${p.section.courseName}\n${formatMinutes(p.startMin)}–${formatMinutes(p.endMin)} · ${p.room}${p.conflict ? "\n⚠ time conflict" : ""}`}
+                      title={`${p.section.courseCode}${p.section.section ? ` (${p.section.section})` : ""} · ${p.section.courseName}\n${formatMinutes(p.startMin)}–${formatMinutes(p.endMin)} · ${p.room}${isConflict ? "\n⚠ conflict" : ""}`}
                       className="absolute flex items-center overflow-hidden rounded-full px-2 text-xs font-semibold text-white shadow-sm"
                       style={{
                         left: pctLeft(p.startMin),
@@ -141,8 +153,8 @@ export default function TimetableGrid({ sections }: { sections: PlanSection[] })
                         top: ROW_PAD + p.lane * (LANE_H + LANE_GAP),
                         height: LANE_H,
                         backgroundColor: color,
-                        outline: p.conflict ? "2px solid #DC2626" : undefined,
-                        outlineOffset: p.conflict ? "-2px" : undefined,
+                        outline: isConflict ? "2px solid #DC2626" : undefined,
+                        outlineOffset: isConflict ? "-2px" : undefined,
                       }}
                     >
                       <span className="truncate">{p.section.courseCode}</span>

@@ -103,6 +103,49 @@ export function meetingsConflict(a: Meeting, b: Meeting): boolean {
   return a.day === b.day && a.startMin < b.endMin && b.startMin < a.endMin;
 }
 
+export interface ConflictResult {
+  /** keys of sections that overlap another in time */
+  timeSet: Set<string>;
+  /** keys of sections sharing a course code with another (added twice) */
+  dupSet: Set<string>;
+  /** union of the above, for outlining on the grid */
+  all: Set<string>;
+}
+
+/**
+ * Find clashes among planned sections: a *duplicate* is more than one section of
+ * the same course code, and a *time* clash is two sections with overlapping
+ * meetings.
+ */
+export function detectConflicts(planned: PlanSection[]): ConflictResult {
+  const timeSet = new Set<string>();
+  const dupSet = new Set<string>();
+
+  const byCode = new Map<string, PlanSection[]>();
+  for (const s of planned) {
+    const list = byCode.get(s.courseCode) ?? [];
+    list.push(s);
+    byCode.set(s.courseCode, list);
+  }
+  for (const list of byCode.values()) {
+    if (list.length > 1) for (const s of list) dupSet.add(s.key);
+  }
+
+  for (let i = 0; i < planned.length; i++) {
+    for (let j = i + 1; j < planned.length; j++) {
+      const clash = planned[i].meetings.some((a) =>
+        planned[j].meetings.some((b) => meetingsConflict(a, b))
+      );
+      if (clash) {
+        timeSet.add(planned[i].key);
+        timeSet.add(planned[j].key);
+      }
+    }
+  }
+
+  return { timeSet, dupSet, all: new Set([...timeSet, ...dupSet]) };
+}
+
 // Solid block colors, echoing the reference design (pink, blue, orange, …).
 const PALETTE = [
   "#E11D62",

@@ -5,9 +5,9 @@ import type { ScheduleData } from "@/lib/scheduleQueries";
 import type { RecommendedCourse } from "@/lib/recommendations";
 import {
   colorFor,
+  detectConflicts,
   formatMinutes,
   groupSections,
-  meetingsConflict,
   type PlanSection,
 } from "@/lib/timetable";
 import TimetableGrid from "./TimetableGrid";
@@ -63,22 +63,11 @@ export default function PlanBuilder({
     [keys, byKey]
   );
 
-  // Sections whose times clash with another planned section.
-  const conflicting = useMemo(() => {
-    const set = new Set<string>();
-    for (let i = 0; i < planned.length; i++) {
-      for (let j = i + 1; j < planned.length; j++) {
-        const clash = planned[i].meetings.some((a) =>
-          planned[j].meetings.some((b) => meetingsConflict(a, b))
-        );
-        if (clash) {
-          set.add(planned[i].key);
-          set.add(planned[j].key);
-        }
-      }
-    }
-    return set;
-  }, [planned]);
+  // Clashes between planned sections: duplicate course code and/or time overlap.
+  const { timeSet, dupSet, all: conflicting } = useMemo(
+    () => detectConflicts(planned),
+    [planned]
+  );
 
   const plannedCodes = useMemo(
     () => new Set(planned.map((s) => s.courseCode)),
@@ -103,11 +92,15 @@ export default function PlanBuilder({
 
   return (
     <div className="space-y-6">
-      <TimetableGrid sections={planned} />
+      <TimetableGrid sections={planned} conflictKeys={conflicting} />
 
       {conflicting.size > 0 ? (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          ⚠ Some classes overlap in time. Conflicting sections are outlined in red on the grid.
+        <div className="space-y-1 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {dupSet.size > 0 ? (
+            <p>⚠ You&apos;ve added more than one section of the same course.</p>
+          ) : null}
+          {timeSet.size > 0 ? <p>⚠ Some classes overlap in time.</p> : null}
+          <p className="text-xs text-red-500">Conflicting sections are outlined in red on the grid.</p>
         </div>
       ) : null}
 
@@ -251,9 +244,14 @@ export default function PlanBuilder({
                       <p className="text-sm">
                         <span className="font-mono font-semibold text-gray-900">{s.courseCode}</span>
                         {s.section ? <span className="ml-2 text-gray-500">§{s.section}</span> : null}
-                        {conflicting.has(s.key) ? (
+                        {dupSet.has(s.key) ? (
                           <span className="ml-2 rounded bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-700">
-                            conflict
+                            duplicate course
+                          </span>
+                        ) : null}
+                        {timeSet.has(s.key) ? (
+                          <span className="ml-2 rounded bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-700">
+                            time conflict
                           </span>
                         ) : null}
                       </p>
