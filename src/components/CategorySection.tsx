@@ -3,16 +3,17 @@
 import { useState } from "react";
 import type { Category, Course } from "@/lib/studentChecklist";
 
-// Shared fixed column widths so the header and every group table line up.
+// Shared column widths so the header and every group table line up.
+// Percentages scale with the container and let text wrap inside its cell
+// instead of overflowing the card at any viewport width.
 function Cols() {
   return (
     <colgroup>
-      <col className="w-20" />
-      {/* name takes the remaining width */}
-      <col />
-      <col className="w-14" />
-      <col className="w-16" />
-      <col className="w-24" />
+      <col className="w-[13%]" />
+      <col className="w-[44%]" />
+      <col className="w-[9%]" />
+      <col className="w-[10%]" />
+      <col className="w-[24%]" />
     </colgroup>
   );
 }
@@ -33,11 +34,11 @@ function gradeBadge(grade: string) {
 function CourseRow({ course }: { course: Course }) {
   return (
     <tr className="border-t border-gray-100">
-      <td className="py-1.5 pr-3 font-mono text-xs text-gray-600 whitespace-nowrap">{course.code}</td>
-      <td className="py-1.5 pr-3 text-gray-800">{course.name}</td>
-      <td className="py-1.5 pr-3 text-center text-gray-600 whitespace-nowrap">{course.credit}</td>
-      <td className="py-1.5 pr-3 text-center whitespace-nowrap">{gradeBadge(course.grade)}</td>
-      <td className="py-1.5 text-xs text-gray-400 whitespace-nowrap">{course.note}</td>
+      <td className="py-1.5 pr-3 align-top font-mono text-xs text-gray-600 whitespace-nowrap">{course.code}</td>
+      <td className="py-1.5 pr-3 align-top text-gray-800">{course.name}</td>
+      <td className="py-1.5 pr-3 align-top text-center text-gray-600 whitespace-nowrap">{course.credit}</td>
+      <td className="py-1.5 pr-3 align-top text-center whitespace-nowrap">{gradeBadge(course.grade)}</td>
+      <td className="py-1.5 align-top text-xs break-words text-gray-400">{course.note}</td>
     </tr>
   );
 }
