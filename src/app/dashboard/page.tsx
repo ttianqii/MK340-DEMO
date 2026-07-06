@@ -2,8 +2,11 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/serverAuth";
 import { decryptValue } from "@/lib/serverCrypto";
 import { fetchChecklist, type Checklist } from "@/lib/studentChecklist";
-import LogoutButton from "@/components/LogoutButton";
+import DashboardHeader from "@/components/DashboardHeader";
 import ChecklistCategories from "@/components/ChecklistCategories";
+
+// Redundant with the GPA badge and the credits-earned progress bar above.
+const HIDDEN_INFO = ["เกรดเฉลี่ยสะสม", "หน่วยกิตสำเร็จการศึกษาของหลักสูตร", "หน่วยกิตที่เรียนได้"];
 
 export const dynamic = "force-dynamic";
 
@@ -16,15 +19,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2">
-            <h1 className="text-lg font-semibold text-gray-900">Study Plan</h1>
-            <span className="text-sm text-gray-400">/ {session.u}</span>
-          </div>
-          <LogoutButton />
-        </div>
-      </header>
+      <DashboardHeader username={session.u} />
 
       <main className="mx-auto max-w-5xl px-6 py-8">
         {!result || !result.ok ? (
@@ -91,7 +86,9 @@ function ChecklistView({ checklist }: { checklist: Checklist }) {
 
         {/* Info grid */}
         <dl className="grid grid-cols-1 gap-x-8 gap-y-3 border-t border-gray-100 px-6 py-4 text-sm sm:grid-cols-2">
-          {student.info.map((item, i) => (
+          {student.info
+            .filter((item) => !HIDDEN_INFO.includes(item.label))
+            .map((item, i) => (
             <div key={i} className="flex justify-between gap-4">
               <dt className="text-gray-500">{item.label}</dt>
               <dd className="text-right font-medium text-gray-800">{item.value || "—"}</dd>
