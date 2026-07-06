@@ -139,7 +139,7 @@ export default function PlanBuilder({
                     </span>
                   ) : null}
                   <span className="text-xs text-gray-400">
-                    {inPlan ? "✓ in plan" : `${r.sectionCount}§`}
+                    {inPlan ? "✓ in plan" : `${r.sectionCount} S.`}
                   </span>
                 </button>
               );
@@ -191,7 +191,7 @@ export default function PlanBuilder({
                   <div className="min-w-0">
                     <p className="text-sm">
                       <span className="font-mono font-semibold text-gray-900">{s.courseCode}</span>
-                      {s.section ? <span className="ml-2 text-gray-500">§{s.section}</span> : null}
+                      {s.section ? <span className="ml-2 text-gray-500">S.{s.section}</span> : null}
                     </p>
                     <p className="truncate text-xs text-gray-500">{s.courseName}</p>
                     <p className="mt-1 text-xs text-gray-400">{meetingLabel(s)}</p>
@@ -243,7 +243,7 @@ export default function PlanBuilder({
                     <div className="min-w-0">
                       <p className="text-sm">
                         <span className="font-mono font-semibold text-gray-900">{s.courseCode}</span>
-                        {s.section ? <span className="ml-2 text-gray-500">§{s.section}</span> : null}
+                        {s.section ? <span className="ml-2 text-gray-500">S.{s.section}</span> : null}
                         {dupSet.has(s.key) ? (
                           <span className="ml-2 rounded bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-700">
                             duplicate course
