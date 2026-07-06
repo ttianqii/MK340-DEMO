@@ -94,7 +94,15 @@ export default function CategorySection({
               {grp.group !== "-" ? (
                 <h4 className="mb-1 text-sm font-medium text-gray-700">{grp.group}</h4>
               ) : null}
-              <table className="w-full text-sm">
+              <table className="w-full table-fixed text-sm">
+                <colgroup>
+                  <col className="w-20" />
+                  {/* name takes the remaining width */}
+                  <col />
+                  <col className="w-14" />
+                  <col className="w-16" />
+                  <col className="w-24" />
+                </colgroup>
                 <tbody>
                   {grp.courses.map((c, i) => (
                     <CourseRow key={i} course={c} />
