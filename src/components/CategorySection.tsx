@@ -71,7 +71,7 @@ export default function CategorySection({
         onClick={() => setInternalOpen((v) => !v)}
         aria-expanded={open}
         aria-controls={bodyId}
-        className="flex w-full flex-wrap items-center justify-between gap-2 border-b border-gray-100 bg-gray-50 px-6 py-3 text-left transition-colors hover:bg-gray-100"
+        className="flex w-full flex-wrap items-center justify-between gap-2 border-b border-gray-100 bg-gray-50 px-4 py-3 text-left transition-colors hover:bg-gray-100 sm:px-6"
       >
         <span className="flex items-center gap-2">
           <svg
@@ -89,7 +89,7 @@ export default function CategorySection({
           <span className="font-semibold text-gray-900">{title}</span>
         </span>
         {category.creditRequired != null ? (
-          <span className="flex items-center gap-3">
+          <span className="flex w-full items-center gap-3 sm:w-auto">
             <span className="text-sm text-gray-500">
               {category.creditEarned} / {category.creditRequired} credits
             </span>
@@ -103,34 +103,36 @@ export default function CategorySection({
       </button>
 
       {open ? (
-        <div id={bodyId} className="px-6 pb-2">
-          <table className="w-full table-fixed text-sm">
-            <Cols />
-            <thead>
-              <tr className="text-left text-xs font-medium text-gray-400">
-                <th className="py-2 pr-3 font-medium">รหัสวิชา</th>
-                <th className="py-2 pr-3 font-medium">ชื่อวิชา</th>
-                <th className="py-2 pr-3 text-center font-medium">หน่วยกิต</th>
-                <th className="py-2 pr-3 text-center font-medium">เกรด</th>
-                <th className="py-2 font-medium">วิชาพื้นความรู้</th>
-              </tr>
-            </thead>
-          </table>
-          {category.groups.map((grp, gi) => (
-            <div key={gi} className="py-2">
-              {grp.group !== "-" ? (
-                <h4 className="mb-1 text-sm font-medium text-gray-700">{grp.group}</h4>
-              ) : null}
-              <table className="w-full table-fixed text-sm">
-                <Cols />
-                <tbody>
-                  {grp.courses.map((c, i) => (
-                    <CourseRow key={i} course={c} />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ))}
+        <div id={bodyId} className="overflow-x-auto">
+          <div className="min-w-[520px] px-4 pb-2 sm:px-6">
+            <table className="w-full table-fixed text-sm">
+              <Cols />
+              <thead>
+                <tr className="text-left text-xs font-medium text-gray-400">
+                  <th className="py-2 pr-3 font-medium">รหัสวิชา</th>
+                  <th className="py-2 pr-3 font-medium">ชื่อวิชา</th>
+                  <th className="py-2 pr-3 text-center font-medium">หน่วยกิต</th>
+                  <th className="py-2 pr-3 text-center font-medium">เกรด</th>
+                  <th className="py-2 font-medium">วิชาพื้นความรู้</th>
+                </tr>
+              </thead>
+            </table>
+            {category.groups.map((grp, gi) => (
+              <div key={gi} className="py-2">
+                {grp.group !== "-" ? (
+                  <h4 className="mb-1 text-sm font-medium text-gray-700">{grp.group}</h4>
+                ) : null}
+                <table className="w-full table-fixed text-sm">
+                  <Cols />
+                  <tbody>
+                    {grp.courses.map((c, i) => (
+                      <CourseRow key={i} course={c} />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
+          </div>
         </div>
       ) : null}
     </section>

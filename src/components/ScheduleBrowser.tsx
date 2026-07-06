@@ -25,7 +25,7 @@ export default function ScheduleBrowser({ data }: { data: ScheduleData }) {
   return (
     <div className="space-y-5">
       {/* Day tabs */}
-      <div className="flex flex-wrap gap-1 border-b border-gray-200">
+      <div className="flex gap-1 overflow-x-auto border-b border-gray-200">
         {days.map((d) => {
           const active = d === day;
           return (
@@ -34,7 +34,7 @@ export default function ScheduleBrowser({ data }: { data: ScheduleData }) {
               type="button"
               onClick={() => setDay(d)}
               aria-current={active ? "page" : undefined}
-              className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
+              className={`-mb-px shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
                 active
                   ? "border-blue-600 text-blue-700"
                   : "border-transparent text-gray-500 hover:text-gray-800"
@@ -90,7 +90,7 @@ function ScheduleTable({ slots }: { slots: ScheduleSlot[] }) {
   return (
     <div className="overflow-hidden rounded-lg bg-white shadow">
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
+        <table className="w-full min-w-[540px] text-left text-sm">
           <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
             <tr>
               <th className="px-4 py-3 font-medium">Time</th>

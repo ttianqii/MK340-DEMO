@@ -21,7 +21,7 @@ export default async function DashboardPage() {
     <div className="min-h-screen bg-gray-100">
       <DashboardHeader username={session.u} />
 
-      <main className="mx-auto max-w-5xl px-6 py-8">
+      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
         {!result || !result.ok ? (
           <div className="rounded-md bg-white p-8 text-center shadow">
             <p className="text-gray-700">
@@ -51,28 +51,30 @@ function ChecklistView({ checklist }: { checklist: Checklist }) {
     <div className="space-y-6">
       {/* Student card */}
       <section className="overflow-hidden rounded-lg bg-white shadow">
-        <div className="flex flex-col gap-6 p-6 sm:flex-row sm:items-center">
-          {student.photo ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={student.photo}
-              alt={student.nameEn || student.nameTh}
-              className="h-24 w-24 rounded-full border border-gray-200 object-cover"
-            />
-          ) : null}
-          <div className="flex-1">
-            <h2 className="text-xl font-semibold text-gray-900">{student.nameTh}</h2>
-            {student.nameEn ? <p className="text-sm text-gray-500">{student.nameEn}</p> : null}
-            <p className="mt-1 font-mono text-sm text-gray-500">{student.studentId}</p>
+        <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:gap-6 sm:p-6">
+          <div className="flex min-w-0 flex-1 items-center gap-4 sm:gap-6">
+            {student.photo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={student.photo}
+                alt={student.nameEn || student.nameTh}
+                className="h-16 w-16 shrink-0 rounded-full border border-gray-200 object-cover sm:h-24 sm:w-24"
+              />
+            ) : null}
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg font-semibold text-gray-900 sm:text-xl">{student.nameTh}</h2>
+              {student.nameEn ? <p className="truncate text-sm text-gray-500">{student.nameEn}</p> : null}
+              <p className="mt-1 font-mono text-sm text-gray-500">{student.studentId}</p>
+            </div>
           </div>
-          <div className="text-right">
+          <div className="flex items-baseline gap-2 border-t border-gray-100 pt-3 sm:block sm:border-0 sm:pt-0 sm:text-right">
             <p className="text-3xl font-bold text-blue-600">{student.gpa || "—"}</p>
             <p className="text-xs uppercase tracking-wide text-gray-400">GPA</p>
           </div>
         </div>
 
         {/* Overall progress */}
-        <div className="border-t border-gray-100 px-6 py-4">
+        <div className="border-t border-gray-100 px-4 py-4 sm:px-6">
           <div className="mb-1 flex items-center justify-between text-sm">
             <span className="font-medium text-gray-700">Credits earned</span>
             <span className="text-gray-500">
@@ -85,7 +87,7 @@ function ChecklistView({ checklist }: { checklist: Checklist }) {
         </div>
 
         {/* Info grid */}
-        <dl className="grid grid-cols-1 gap-x-8 gap-y-3 border-t border-gray-100 px-6 py-4 text-sm sm:grid-cols-2">
+        <dl className="grid grid-cols-1 gap-x-8 gap-y-3 border-t border-gray-100 px-4 py-4 text-sm sm:grid-cols-2 sm:px-6">
           {student.info
             .filter((item) => !HIDDEN_INFO.includes(item.label))
             .map((item, i) => (

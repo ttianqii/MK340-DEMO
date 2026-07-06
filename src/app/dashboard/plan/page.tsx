@@ -28,12 +28,12 @@ export default async function PlanPage() {
     <div className="min-h-screen bg-gray-100">
       <DashboardHeader username={session.u} />
 
-      <main className="mx-auto max-w-5xl px-6 py-8">
+      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
         <div className="mb-6">
           <h1 className="text-2xl font-semibold text-gray-900">Plan next term</h1>
           <p className="mt-1 text-sm text-gray-500">
             {schedule.campus && schedule.semester
-              ? `${schedule.campus} · ${schedule.semester}`
+              ? `${schedule.campus} · ${schedule.semester}.`
               : "Build your weekly timetable."}{" "}
             Add class sections to lay out your week and catch time conflicts.
           </p>

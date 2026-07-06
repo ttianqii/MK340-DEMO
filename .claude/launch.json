@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "dev",
-      "runtimeExecutable": "node",
+      "runtimeExecutable": "/Users/pk/.nvm/versions/node/v24.11.1/bin/node",
       "runtimeArgs": ["node_modules/next/dist/bin/next", "dev"],
       "port": 3000,
       "autoPort": true
