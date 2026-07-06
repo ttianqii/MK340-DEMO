@@ -6,7 +6,6 @@ import LogoutButton from "./LogoutButton";
 
 const NAV = [
   { href: "/dashboard", label: "Study Plan" },
-  { href: "/dashboard/schedule", label: "Class schedule" },
   { href: "/dashboard/plan", label: "Plan next term" },
 ];
 
