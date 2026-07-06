@@ -162,6 +162,9 @@ export default function TimetableGrid({
                         {p.section.section ? (
                           <span className="ml-1 font-normal opacity-80">{p.section.section}</span>
                         ) : null}
+                        {p.room ? (
+                          <span className="ml-1 font-normal opacity-70">@{p.room}</span>
+                        ) : null}
                       </span>
                     </div>
                   );
