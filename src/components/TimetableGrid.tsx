@@ -157,7 +157,12 @@ export default function TimetableGrid({
                         outlineOffset: isConflict ? "-2px" : undefined,
                       }}
                     >
-                      <span className="truncate">{p.section.courseCode}</span>
+                      <span className="truncate">
+                        {p.section.courseCode}
+                        {p.section.section ? (
+                          <span className="ml-1 font-normal opacity-80">{p.section.section}</span>
+                        ) : null}
+                      </span>
                     </div>
                   );
                 })}
