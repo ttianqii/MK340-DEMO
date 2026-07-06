@@ -31,11 +31,15 @@ function CourseRow({ course }: { course: Course }) {
 export default function CategorySection({
   category,
   defaultOpen = false,
+  forceOpen,
 }: {
   category: Category;
   defaultOpen?: boolean;
+  forceOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
+  const [internalOpen, setInternalOpen] = useState(defaultOpen);
+  // While a search is active the parent forces every matching category open.
+  const open = forceOpen !== undefined ? forceOpen : internalOpen;
 
   const cpct =
     category.creditRequired && category.creditRequired > 0
@@ -49,7 +53,7 @@ export default function CategorySection({
     <section className="overflow-hidden rounded-lg bg-white shadow">
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setInternalOpen((v) => !v)}
         aria-expanded={open}
         aria-controls={bodyId}
         className="flex w-full flex-wrap items-center justify-between gap-2 border-b border-gray-100 bg-gray-50 px-6 py-3 text-left transition-colors hover:bg-gray-100"

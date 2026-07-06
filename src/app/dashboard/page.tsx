@@ -3,7 +3,7 @@ import { getSession } from "@/lib/serverAuth";
 import { decryptValue } from "@/lib/serverCrypto";
 import { fetchChecklist, type Checklist } from "@/lib/studentChecklist";
 import LogoutButton from "@/components/LogoutButton";
-import CategorySection from "@/components/CategorySection";
+import ChecklistCategories from "@/components/ChecklistCategories";
 
 export const dynamic = "force-dynamic";
 
@@ -100,10 +100,8 @@ function ChecklistView({ checklist }: { checklist: Checklist }) {
         </dl>
       </section>
 
-      {/* Categories */}
-      {categories.map((cat, ci) => (
-        <CategorySection key={ci} category={cat} />
-      ))}
+      {/* Categories + course search */}
+      <ChecklistCategories categories={categories} />
     </div>
   );
 }
