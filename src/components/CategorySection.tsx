@@ -3,6 +3,20 @@
 import { useState } from "react";
 import type { Category, Course } from "@/lib/studentChecklist";
 
+// Shared fixed column widths so the header and every group table line up.
+function Cols() {
+  return (
+    <colgroup>
+      <col className="w-20" />
+      {/* name takes the remaining width */}
+      <col />
+      <col className="w-14" />
+      <col className="w-16" />
+      <col className="w-24" />
+    </colgroup>
+  );
+}
+
 function gradeBadge(grade: string) {
   const g = grade.trim().toUpperCase();
   if (!g) {
@@ -88,21 +102,26 @@ export default function CategorySection({
       </button>
 
       {open ? (
-        <div id={bodyId} className="px-6 py-2">
+        <div id={bodyId} className="px-6 pb-2">
+          <table className="w-full table-fixed text-sm">
+            <Cols />
+            <thead>
+              <tr className="text-left text-xs font-medium text-gray-400">
+                <th className="py-2 pr-3 font-medium">รหัสวิชา</th>
+                <th className="py-2 pr-3 font-medium">ชื่อวิชา</th>
+                <th className="py-2 pr-3 text-center font-medium">หน่วยกิต</th>
+                <th className="py-2 pr-3 text-center font-medium">เกรด</th>
+                <th className="py-2 font-medium">วิชาพื้นความรู้</th>
+              </tr>
+            </thead>
+          </table>
           {category.groups.map((grp, gi) => (
             <div key={gi} className="py-2">
               {grp.group !== "-" ? (
                 <h4 className="mb-1 text-sm font-medium text-gray-700">{grp.group}</h4>
               ) : null}
               <table className="w-full table-fixed text-sm">
-                <colgroup>
-                  <col className="w-20" />
-                  {/* name takes the remaining width */}
-                  <col />
-                  <col className="w-14" />
-                  <col className="w-16" />
-                  <col className="w-24" />
-                </colgroup>
+                <Cols />
                 <tbody>
                   {grp.courses.map((c, i) => (
                     <CourseRow key={i} course={c} />
