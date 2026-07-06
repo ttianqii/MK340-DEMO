@@ -12,6 +12,5 @@ export async function GET() {
   return NextResponse.json({
     username: session.u,
     role: session.role,
-    hasUrsaSession: !!session.ursa,
   });
 }

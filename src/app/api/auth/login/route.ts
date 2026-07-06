@@ -1,21 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticate } from "@/lib/buAuth";
+import { authenticate } from "@/lib/studentChecklist";
 import { encryptValue } from "@/lib/serverCrypto";
 import { signSession, SESSION_COOKIE, SESSION_MAX_AGE } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
-
-function loginResponse(redirectTo: string, token: string) {
-  const response = NextResponse.json({ ok: true, role: "student", redirectTo });
-  response.cookies.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: SESSION_MAX_AGE,
-  });
-  return response;
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,16 +13,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "Username and password are required." }, { status: 400 });
     }
 
-    const uname = username.trim();
-    const result = await authenticate(uname, password);
+    const result = await authenticate(username.trim(), password);
 
-    if (!result.ok) {
-      return NextResponse.json({ message: "Invalid BU username or password." }, { status: 401 });
+    if (!result.ok || !result.url) {
+      return NextResponse.json({ message: result.message || "Invalid username or password." }, { status: 401 });
     }
 
-    const ursa = result.ursaCookies ? encryptValue(result.ursaCookies) : undefined;
-    const token = await signSession(uname, { ursa });
-    return loginResponse("/dashboard", token);
+    // Keep the checklist auth cookies (encrypted) so the dashboard can fetch the
+    // student's study plan server-side without asking them to log in again.
+    const ck = result.cookies ? encryptValue(result.cookies) : undefined;
+    const token = await signSession(username.trim(), { url: result.url, ck });
+
+    const response = NextResponse.json({ ok: true, role: "student", redirectTo: "/dashboard" });
+    response.cookies.set(SESSION_COOKIE, token, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: SESSION_MAX_AGE,
+    });
+    return response;
   } catch (error) {
     console.error("Login error:", error);
     return NextResponse.json({ message: "Login failed. Please try again." }, { status: 500 });

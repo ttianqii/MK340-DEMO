@@ -1,13 +1,14 @@
 // Edge-safe session helpers.
 //
-// IMPORTANT: this module is imported by `src/middleware.ts`, which runs on the
+// IMPORTANT: this module is imported by `src/proxy.ts`, which runs on the
 // Edge runtime where Node's `crypto` module is unavailable. Everything here uses
 // only Web Crypto (`crypto.subtle`), `TextEncoder`, and `btoa`/`atob`, so the same
-// code works in middleware (Edge) and in route handlers (Node).
+// code works in the proxy (Edge) and in route handlers (Node).
 //
 // A session token is `base64url(payloadJson).base64url(HMAC-SHA256(payloadJson))`.
-// The payload is signed, not encrypted — it carries no secret, only the username
-// and expiry — so tampering is what we guard against, via the signature.
+// The payload is signed, not encrypted — so tampering is what we guard against,
+// via the signature. Sensitive values (the studentchecklist.bu.ac.th auth
+// cookies) are separately AES-encrypted before being placed in the payload.
 
 export const SESSION_COOKIE = "sp_session";
 export const SESSION_MAX_AGE = 60 * 60 * 8; // 8 hours, in seconds
@@ -18,12 +19,14 @@ export interface SessionPayload {
   u: string; // BU username
   role: Role;
   exp: number; // expiry, unix seconds
-  ursa?: string; // encrypted URSA session cookies — lets the server fetch the student's own portal pages
+  url: string; // the student's studentchecklist url token (identifies their record)
+  ck?: string; // encrypted studentchecklist.bu.ac.th auth cookies — used to fetch the checklist server-side
 }
 
 /** Sensitive, encrypted credentials carried in the session. */
 export interface SessionExtras {
-  ursa?: string;
+  url: string;
+  ck?: string;
 }
 
 const encoder = new TextEncoder();
@@ -68,12 +71,13 @@ async function importKey(): Promise<CryptoKey> {
 }
 
 /** Create a signed session token for the given student username. */
-export async function signSession(username: string, extras: SessionExtras = {}): Promise<string> {
+export async function signSession(username: string, extras: SessionExtras): Promise<string> {
   const payload: SessionPayload = {
     u: username,
     role: "student",
     exp: Math.floor(Date.now() / 1000) + SESSION_MAX_AGE,
-    ...(extras.ursa ? { ursa: extras.ursa } : {}),
+    url: extras.url,
+    ...(extras.ck ? { ck: extras.ck } : {}),
   };
   const payloadB64 = strToB64url(JSON.stringify(payload));
   const key = await importKey();
