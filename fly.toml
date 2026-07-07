@@ -8,9 +8,6 @@ primary_region = 'iad'
 
 [build]
 
-[processes]
-  app = 'bun ./dbsetup.js bun run start'
-
 [[mounts]]
   source = 'data'
   destination = '/data'

@@ -23,7 +23,7 @@ FROM node:22-bookworm-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production \
-    PORT=3000 \
+    PORT=8080 \
     HOSTNAME=0.0.0.0 \
     DATABASE_URL=/data/sqlite.db
 
@@ -46,5 +46,5 @@ RUN chmod +x ./docker-entrypoint.sh
 # SQLite lives on a mounted volume so data survives container restarts.
 VOLUME /data
 
-EXPOSE 3000
+EXPOSE 8080
 ENTRYPOINT ["./docker-entrypoint.sh"]
