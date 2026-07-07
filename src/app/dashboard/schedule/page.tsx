@@ -10,7 +10,7 @@ export default async function SchedulePage() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const schedule = getSchedule();
+  const schedule = await getSchedule();
 
   return (
     <div className="min-h-screen bg-gray-100">

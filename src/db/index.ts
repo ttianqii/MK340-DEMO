@@ -1,37 +1,22 @@
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
+import { drizzle } from "drizzle-orm/libsql";
+import { createClient } from "@libsql/client";
 import * as schema from "./schema";
 
-// Local SQLite file. Override with DATABASE_URL for a different path.
-const DB_FILE = process.env.DATABASE_URL ?? "sqlite.db";
+// libSQL connection.
+//
+// In production (Vercel), point at a hosted Turso database with:
+//   TURSO_DATABASE_URL=libsql://<db>-<org>.turso.io
+//   TURSO_AUTH_TOKEN=<token>
+//
+// For local development it falls back to a plain SQLite file that the libSQL
+// client reads/writes directly — so there is no native `better-sqlite3` build
+// step, and the same code runs on Vercel's read-only, ephemeral filesystem
+// because queries go to the remote Turso database over the network.
+const url = process.env.TURSO_DATABASE_URL ?? "file:sqlite.db";
+const authToken = process.env.TURSO_AUTH_TOKEN;
 
-type DrizzleDb = ReturnType<typeof drizzle<typeof schema>>;
+const client = createClient({ url, authToken });
 
-// Open the connection lazily on first use. Opening at module load runs the
-// WAL pragma (an exclusive-lock write) at import time, which collides across
-// `next build`'s parallel page-data workers (SQLITE_BUSY). Deferring it means
-// the DB is only touched when a query actually runs — never during the build.
-let instance: DrizzleDb | undefined;
-
-function getDb(): DrizzleDb {
-  if (!instance) {
-    const sqlite = new Database(DB_FILE);
-    sqlite.pragma("journal_mode = WAL");
-    sqlite.pragma("busy_timeout = 5000");
-    instance = drizzle(sqlite, { schema });
-  }
-  return instance;
-}
-
-// Proxy keeps the `db.select()...` call sites unchanged while deferring the
-// actual connection. Methods are bound to the real instance so drizzle's
-// internal `this` stays intact.
-export const db = new Proxy({} as DrizzleDb, {
-  get(_target, prop) {
-    const real = getDb();
-    const value = Reflect.get(real, prop, real);
-    return typeof value === "function" ? value.bind(real) : value;
-  },
-}) satisfies DrizzleDb;
+export const db = drizzle(client, { schema });
 
 export { schema };

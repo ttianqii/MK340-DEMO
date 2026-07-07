@@ -14,7 +14,7 @@ import { parseRoomSchedule } from "../lib/roomSchedule";
 const DEFAULT_FILE =
   "/Users/pk/Downloads/Bangkok University - URSA Undergraduates Faculty Version.html";
 
-function main() {
+async function main() {
   const file = process.argv[2] ?? DEFAULT_FILE;
 
   const html = new TextDecoder("windows-874").decode(readFileSync(file));
@@ -27,12 +27,11 @@ function main() {
 
   let inserted = 0;
   for (const e of entries) {
-    const res = db
+    const res = await db
       .insert(classSchedule)
       .values(e)
-      .onConflictDoNothing()
-      .run();
-    inserted += res.changes;
+      .onConflictDoNothing();
+    inserted += res.rowsAffected;
   }
 
   const { day, semester, campus } = entries[0];
@@ -42,4 +41,7 @@ function main() {
   );
 }
 
-main();
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

@@ -14,7 +14,7 @@ export default async function PlanPage() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const schedule = getSchedule();
+  const schedule = await getSchedule();
 
   // Cross-reference the student's Study Plan with what's offered this term.
   const cookies = session.ck ? decryptValue(session.ck) : null;

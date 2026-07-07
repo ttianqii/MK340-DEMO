@@ -43,8 +43,8 @@ function dayRank(day: string): number {
 }
 
 /** Load the whole stored schedule, ready for client-side filtering. */
-export function getSchedule(): ScheduleData {
-  const rows = db.select().from(classSchedule).all() as ClassScheduleRow[];
+export async function getSchedule(): Promise<ScheduleData> {
+  const rows = (await db.select().from(classSchedule)) as ClassScheduleRow[];
 
   const slots: ScheduleSlot[] = rows
     .map((r) => ({

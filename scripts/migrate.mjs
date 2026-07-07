@@ -1,17 +1,19 @@
-// Apply Drizzle migrations to the SQLite file before the server starts.
+// Apply Drizzle migrations to the libSQL / Turso database.
 //
-// Run inside the container entrypoint. Resolves better-sqlite3 / drizzle-orm
-// from the standalone node_modules (cwd), and reads the compiled migrations
-// from ./drizzle. Idempotent: drizzle tracks applied migrations in the DB.
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+//   TURSO_DATABASE_URL=... TURSO_AUTH_TOKEN=... node scripts/migrate.mjs
+//
+// Reads the compiled migrations from ./drizzle. Idempotent: drizzle tracks
+// applied migrations in the database. Falls back to a local SQLite file when
+// TURSO_DATABASE_URL is unset, for local development.
+import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/libsql";
+import { migrate } from "drizzle-orm/libsql/migrator";
 
-const dbFile = process.env.DATABASE_URL ?? "sqlite.db";
-const sqlite = new Database(dbFile);
-sqlite.pragma("journal_mode = WAL");
+const url = process.env.TURSO_DATABASE_URL ?? "file:sqlite.db";
+const authToken = process.env.TURSO_AUTH_TOKEN;
 
-migrate(drizzle(sqlite), { migrationsFolder: "./drizzle" });
-sqlite.close();
+const client = createClient({ url, authToken });
 
-console.log(`Migrations applied to ${dbFile}`);
+await migrate(drizzle(client), { migrationsFolder: "./drizzle" });
+
+console.log(`Migrations applied to ${url}`);
