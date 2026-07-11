@@ -30,6 +30,13 @@ function shortCategory(category: string): string {
   return category.replace(/\s*\(Credit earned:.*\)\s*/i, "").trim();
 }
 
+// Course codes referenced in a course's "วิชาพื้นความรู้" (prerequisite) note,
+// e.g. "ต้องผ่าน CS101, CS102 มาก่อน" → ["CS101", "CS102"].
+const CODE_RE = /[A-Z]{2,3}\d{3}/g;
+function extractPrereqCodes(note: string): string[] {
+  return Array.from(note.toUpperCase().matchAll(CODE_RE), (m) => m[0]);
+}
+
 /**
  * Cross-reference the checklist against the offered sections. Returns each
  * still-needed course that has at least one section this term, de-duplicated by
@@ -40,6 +47,9 @@ function shortCategory(category: string): string {
  * course can appear more than once (e.g. as a completed requirement and again as
  * an open elective slot); a blank elective row must not resurrect a course the
  * student has already passed.
+ *
+ * A course that lists prerequisites in its "วิชาพื้นความรู้" note is only
+ * recommended once every one of those prerequisite courses has been passed.
  */
 export function recommendCourses(
   checklist: Checklist,
@@ -70,6 +80,9 @@ export function recommendCourses(
         if (!code || seen.has(code)) continue;
         if (completed.has(code)) continue; // already taken/completed — skip
         if (!stillNeeded(c.grade)) continue;
+
+        const prereqs = extractPrereqCodes(c.note ?? "");
+        if (prereqs.some((p) => !completed.has(p))) continue; // prerequisites not yet passed
 
         const sectionCount = countByCode.get(code) ?? 0;
         if (sectionCount === 0) continue; // not offered this term
