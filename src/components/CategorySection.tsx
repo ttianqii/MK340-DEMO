@@ -101,6 +101,78 @@ function GroupTable({ group }: { group: CourseGroup }) {
   );
 }
 
+// Group names embed a two-level path, "<category> - <sub-group>", e.g.
+// "เอกบังคับ - กลุ่มวิชาโครงสร้างพื้นฐานของระบบ". Split on the first " - ".
+function splitGroupName(name: string) {
+  const idx = name.indexOf(" - ");
+  if (idx === -1) return { prefix: "", sub: name };
+  return { prefix: name.slice(0, idx).trim(), sub: name.slice(idx + 3).trim() };
+}
+
+// Bucket groups by their category prefix, preserving first-seen order.
+function bucketByPrefix(groups: CourseGroup[]) {
+  const buckets: { prefix: string; groups: CourseGroup[] }[] = [];
+  for (const g of groups) {
+    const { prefix } = splitGroupName(g.group);
+    let b = buckets.find((x) => x.prefix === prefix);
+    if (!b) {
+      b = { prefix, groups: [] };
+      buckets.push(b);
+    }
+    b.groups.push(g);
+  }
+  return buckets;
+}
+
+// Aggregate a prefix bucket's progress across the sub-groups that declare
+// required credits. Null when none do.
+function bucketProgress(groups: CourseGroup[]) {
+  let earned = 0;
+  let required = 0;
+  for (const g of groups) {
+    const p = groupProgress(g);
+    if (p) {
+      earned += p.earned;
+      required += p.required;
+    }
+  }
+  if (!required) return null;
+  return { earned, required, pct: Math.min(100, Math.round((earned / required) * 100)) };
+}
+
+function GroupSection({
+  group,
+  id,
+  nested,
+  defaultOpen,
+  forceOpen,
+}: {
+  group: CourseGroup;
+  id: string;
+  nested?: boolean;
+  defaultOpen?: boolean;
+  forceOpen?: boolean;
+}) {
+  const p = groupProgress(group);
+  const label = nested ? splitGroupName(group.group).sub : group.group;
+  return (
+    <CollapsibleSection
+      id={id}
+      nested={nested}
+      defaultOpen={defaultOpen}
+      forceOpen={forceOpen}
+      header={
+        <span className={nested ? "font-medium text-gray-800" : "font-semibold text-gray-900"}>
+          {group.group === "-" ? "Courses" : label || group.group}
+        </span>
+      }
+      headerRight={p ? <CreditBar {...p} /> : null}
+    >
+      <GroupTable group={group} />
+    </CollapsibleSection>
+  );
+}
+
 export default function CategorySection({
   category,
   defaultOpen = false,
@@ -113,27 +185,50 @@ export default function CategorySection({
   const title = category.category.replace(/\s*\(Credit earned:.*\)\s*/i, "").trim();
 
   // The checklist source often has no category headers, so the parser puts
-  // every group under one blank ("-") placeholder category. Collapsing that
-  // would hide the whole plan behind a single meaningless toggle, so instead
-  // make each named group its own collapsible section.
+  // every group under one blank ("-") placeholder category. Recover the real
+  // two-level hierarchy from the group names: an outer collapsible per category
+  // prefix (พื้นฐาน, วิชาแกน, เอกบังคับ, เอกเลือก) with the sub-groups nested
+  // inside. Groups without a "<prefix> - " path fall back to a flat section.
   if (!title || title === "-") {
+    const buckets = bucketByPrefix(category.groups);
     return (
       <>
-        {category.groups.map((grp, gi) => {
-          const p = groupProgress(grp);
-          return (
+        {buckets.map((bucket, bi) =>
+          bucket.prefix ? (
             <CollapsibleSection
-              key={gi}
-              id={`grp-${gi}-${grp.group.replace(/\W+/g, "-")}`}
+              key={bi}
+              id={`cat-${bi}-${bucket.prefix.replace(/\W+/g, "-")}`}
               defaultOpen={defaultOpen}
               forceOpen={forceOpen}
-              header={<span className="font-semibold text-gray-900">{grp.group === "-" ? "Courses" : grp.group}</span>}
-              headerRight={p ? <CreditBar {...p} /> : null}
+              header={<span className="font-semibold text-gray-900">{bucket.prefix}</span>}
+              headerRight={(() => {
+                const bp = bucketProgress(bucket.groups);
+                return bp ? <CreditBar {...bp} /> : null;
+              })()}
             >
-              <GroupTable group={grp} />
+              {bucket.groups.map((grp, gi) => (
+                <GroupSection
+                  key={gi}
+                  nested
+                  group={grp}
+                  id={`grp-${bi}-${gi}`}
+                  defaultOpen={defaultOpen}
+                  forceOpen={forceOpen}
+                />
+              ))}
             </CollapsibleSection>
-          );
-        })}
+          ) : (
+            bucket.groups.map((grp, gi) => (
+              <GroupSection
+                key={`${bi}-${gi}`}
+                group={grp}
+                id={`grp-${bi}-${gi}`}
+                defaultOpen={defaultOpen}
+                forceOpen={forceOpen}
+              />
+            ))
+          )
+        )}
       </>
     );
   }

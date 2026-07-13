@@ -2,15 +2,17 @@
 
 import { useState, type ReactNode } from "react";
 
-// A single collapsible card. Used for both category-level sections (with a
-// credit bar on the right) and group-level sections. The open state is either
-// driven by the parent (forceOpen, e.g. while searching) or managed locally.
+// A single collapsible section. At the top level (default) it's a white card
+// with a shadow; when `nested` it's a flatter row divided by a top border, so
+// it reads as a child of an enclosing card. Open state is either driven by the
+// parent (forceOpen, e.g. while searching) or managed locally.
 export default function CollapsibleSection({
   id,
   header,
   headerRight,
   defaultOpen = false,
   forceOpen,
+  nested = false,
   children,
 }: {
   id: string;
@@ -18,6 +20,7 @@ export default function CollapsibleSection({
   headerRight?: ReactNode;
   defaultOpen?: boolean;
   forceOpen?: boolean;
+  nested?: boolean;
   children: ReactNode;
 }) {
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
@@ -32,14 +35,21 @@ export default function CollapsibleSection({
   }
   const open = forceOpen !== undefined ? forceOpen : internalOpen;
 
+  const sectionClass = nested
+    ? "border-t border-gray-100 first:border-t-0"
+    : "overflow-hidden rounded-lg bg-white shadow";
+  const buttonClass = nested
+    ? `flex w-full flex-wrap items-center justify-between gap-2 bg-white px-4 py-2.5 pl-8 text-left transition-colors hover:bg-gray-50 sm:px-6 sm:pl-10 ${open ? "border-b border-gray-100" : ""}`
+    : "flex w-full flex-wrap items-center justify-between gap-2 border-b border-gray-100 bg-gray-50 px-4 py-3 text-left transition-colors hover:bg-gray-100 sm:px-6";
+
   return (
-    <section className="overflow-hidden rounded-lg bg-white shadow">
+    <section className={sectionClass}>
       <button
         type="button"
         onClick={() => forceOpen === undefined && setInternalOpen((v) => !v)}
         aria-expanded={open}
         aria-controls={id}
-        className="flex w-full flex-wrap items-center justify-between gap-2 border-b border-gray-100 bg-gray-50 px-4 py-3 text-left transition-colors hover:bg-gray-100 sm:px-6"
+        className={buttonClass}
       >
         <span className="flex min-w-0 items-center gap-2">
           <svg
