@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Category, Course } from "@/lib/studentChecklist";
 
 // Shared column widths so the header and every group table line up.
@@ -54,6 +54,11 @@ export default function CategorySection({
 }) {
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
   // While a search is active the parent forces every matching category open.
+  // When forceOpen clears (search reset), snap back to defaultOpen so sections
+  // don't stay open after the user clears the search box.
+  useEffect(() => {
+    if (forceOpen === undefined) setInternalOpen(defaultOpen);
+  }, [forceOpen, defaultOpen]);
   const open = forceOpen !== undefined ? forceOpen : internalOpen;
 
   const cpct =
@@ -68,7 +73,7 @@ export default function CategorySection({
     <section className="overflow-hidden rounded-lg bg-white shadow">
       <button
         type="button"
-        onClick={() => setInternalOpen((v) => !v)}
+        onClick={() => forceOpen === undefined && setInternalOpen((v) => !v)}
         aria-expanded={open}
         aria-controls={bodyId}
         className="flex w-full flex-wrap items-center justify-between gap-2 border-b border-gray-100 bg-gray-50 px-4 py-3 text-left transition-colors hover:bg-gray-100 sm:px-6"
