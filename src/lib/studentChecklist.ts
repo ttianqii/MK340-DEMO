@@ -234,8 +234,20 @@ function parseCategories(html: string): Category[] {
 
     const firstText = cells.find((c) => c.text)?.text || "";
 
-    // Category header: a bold, dark cell like "…(Credit earned:27/30)".
-    if (cells.some((c) => c.attrs.includes("fw-semibold") && c.attrs.includes("text-dark"))) {
+    // Category header: a bold total row like "…(Credit earned:30/30)". The
+    // cell is colour-coded by progress (text-success when complete,
+    // text-warning/text-danger otherwise), so accept any status colour — or the
+    // "Credit earned:" text itself, which reliably marks these rows. Sub-group
+    // headers below are also fw-semibold but underlined (<u>) and uncoloured, so
+    // they don't collide with this check.
+    if (
+      cells.some(
+        (c) =>
+          c.attrs.includes("fw-semibold") &&
+          (/\btext-(success|warning|danger|dark|primary|info)\b/.test(c.attrs) ||
+            /Credit earned:/i.test(c.text))
+      )
+    ) {
       const earned = firstText.match(/Credit earned:\s*(\d+)\s*\/\s*(\d+)/i);
       categories.push({
         category: firstText,

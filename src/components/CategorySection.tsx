@@ -248,14 +248,23 @@ export default function CategorySection({
         ) : null
       }
     >
-      {category.groups.map((grp, gi) => (
-        <div key={gi} className="py-1">
-          {grp.group !== "-" ? (
-            <h4 className="mb-1 px-4 pt-2 text-sm font-medium text-gray-700 sm:px-6">{grp.group}</h4>
-          ) : null}
-          <GroupTable group={grp} />
-        </div>
-      ))}
+      {category.groups.map((grp, gi) =>
+        // A "-" group is the parser's placeholder for courses that sit directly
+        // under a category with no sub-group header — show its table inline
+        // rather than behind a redundant nested toggle.
+        grp.group === "-" ? (
+          <GroupTable key={gi} group={grp} />
+        ) : (
+          <GroupSection
+            key={gi}
+            nested
+            group={grp}
+            id={`grp-${title.replace(/\W+/g, "-")}-${gi}`}
+            defaultOpen={defaultOpen}
+            forceOpen={forceOpen}
+          />
+        )
+      )}
     </CollapsibleSection>
   );
 }
