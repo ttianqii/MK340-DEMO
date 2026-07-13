@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import type { Category, Course } from "@/lib/studentChecklist";
+import type { Category, Course, CourseGroup } from "@/lib/studentChecklist";
+import CollapsibleSection from "./CollapsibleSection";
 
-// Shared column widths so the header and every group table line up.
-// Percentages scale with the container and let text wrap inside its cell
-// instead of overflowing the card at any viewport width.
+// Shared column widths so every group table lines up. Percentages scale with
+// the container and let text wrap inside its cell instead of overflowing the
+// card at any viewport width.
 function Cols() {
   return (
     <colgroup>
@@ -43,6 +43,33 @@ function CourseRow({ course }: { course: Course }) {
   );
 }
 
+// One group's course table, including its column headers.
+function GroupTable({ group }: { group: CourseGroup }) {
+  return (
+    <div className="overflow-x-auto">
+      <div className="min-w-[520px] px-4 pb-3 pt-1 sm:px-6">
+        <table className="w-full table-fixed text-sm">
+          <Cols />
+          <thead>
+            <tr className="text-left text-xs font-medium text-gray-400">
+              <th className="py-2 pr-3 font-medium">รหัสวิชา</th>
+              <th className="py-2 pr-3 font-medium">ชื่อวิชา</th>
+              <th className="py-2 pr-3 text-center font-medium">หน่วยกิต</th>
+              <th className="py-2 pr-3 text-center font-medium">เกรด</th>
+              <th className="py-2 font-medium">วิชาพื้นความรู้</th>
+            </tr>
+          </thead>
+          <tbody>
+            {group.courses.map((c, i) => (
+              <CourseRow key={i} course={c} />
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export default function CategorySection({
   category,
   defaultOpen = false,
@@ -52,48 +79,43 @@ export default function CategorySection({
   defaultOpen?: boolean;
   forceOpen?: boolean;
 }) {
-  const [internalOpen, setInternalOpen] = useState(defaultOpen);
-  // While a search is active the parent forces every matching category open.
-  // When forceOpen clears (search reset), snap back to defaultOpen so sections
-  // don't stay open after the user clears the search box.
-  useEffect(() => {
-    if (forceOpen === undefined) setInternalOpen(defaultOpen);
-  }, [forceOpen, defaultOpen]);
-  const open = forceOpen !== undefined ? forceOpen : internalOpen;
+  const title = category.category.replace(/\s*\(Credit earned:.*\)\s*/i, "").trim();
+
+  // The checklist source often has no category headers, so the parser puts
+  // every group under one blank ("-") placeholder category. Collapsing that
+  // would hide the whole plan behind a single meaningless toggle, so instead
+  // make each named group its own collapsible section.
+  if (!title || title === "-") {
+    return (
+      <>
+        {category.groups.map((grp, gi) => (
+          <CollapsibleSection
+            key={gi}
+            id={`grp-${gi}-${grp.group.replace(/\W+/g, "-")}`}
+            defaultOpen={defaultOpen}
+            forceOpen={forceOpen}
+            header={<span className="font-semibold text-gray-900">{grp.group === "-" ? "Courses" : grp.group}</span>}
+          >
+            <GroupTable group={grp} />
+          </CollapsibleSection>
+        ))}
+      </>
+    );
+  }
 
   const cpct =
     category.creditRequired && category.creditRequired > 0
       ? Math.min(100, Math.round(((category.creditEarned || 0) / category.creditRequired) * 100))
       : null;
 
-  const title = category.category.replace(/\s*\(Credit earned:.*\)\s*/i, "");
-  const bodyId = `cat-body-${title.replace(/\W+/g, "-")}`;
-
   return (
-    <section className="overflow-hidden rounded-lg bg-white shadow">
-      <button
-        type="button"
-        onClick={() => forceOpen === undefined && setInternalOpen((v) => !v)}
-        aria-expanded={open}
-        aria-controls={bodyId}
-        className="flex w-full flex-wrap items-center justify-between gap-2 border-b border-gray-100 bg-gray-50 px-4 py-3 text-left transition-colors hover:bg-gray-100 sm:px-6"
-      >
-        <span className="flex items-center gap-2">
-          <svg
-            className={`h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200 ${open ? "rotate-90" : ""}`}
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              fillRule="evenodd"
-              d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-              clipRule="evenodd"
-            />
-          </svg>
-          <span className="font-semibold text-gray-900">{title}</span>
-        </span>
-        {category.creditRequired != null ? (
+    <CollapsibleSection
+      id={`cat-${title.replace(/\W+/g, "-")}`}
+      defaultOpen={defaultOpen}
+      forceOpen={forceOpen}
+      header={<span className="font-semibold text-gray-900">{title}</span>}
+      headerRight={
+        category.creditRequired != null ? (
           <span className="flex w-full items-center gap-3 sm:w-auto">
             <span className="text-sm text-gray-500">
               {category.creditEarned} / {category.creditRequired} credits
@@ -104,42 +126,17 @@ export default function CategorySection({
               </span>
             ) : null}
           </span>
-        ) : null}
-      </button>
-
-      {open ? (
-        <div id={bodyId} className="overflow-x-auto">
-          <div className="min-w-[520px] px-4 pb-2 sm:px-6">
-            <table className="w-full table-fixed text-sm">
-              <Cols />
-              <thead>
-                <tr className="text-left text-xs font-medium text-gray-400">
-                  <th className="py-2 pr-3 font-medium">รหัสวิชา</th>
-                  <th className="py-2 pr-3 font-medium">ชื่อวิชา</th>
-                  <th className="py-2 pr-3 text-center font-medium">หน่วยกิต</th>
-                  <th className="py-2 pr-3 text-center font-medium">เกรด</th>
-                  <th className="py-2 font-medium">วิชาพื้นความรู้</th>
-                </tr>
-              </thead>
-            </table>
-            {category.groups.map((grp, gi) => (
-              <div key={gi} className="py-2">
-                {grp.group !== "-" ? (
-                  <h4 className="mb-1 text-sm font-medium text-gray-700">{grp.group}</h4>
-                ) : null}
-                <table className="w-full table-fixed text-sm">
-                  <Cols />
-                  <tbody>
-                    {grp.courses.map((c, i) => (
-                      <CourseRow key={i} course={c} />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ))}
-          </div>
+        ) : null
+      }
+    >
+      {category.groups.map((grp, gi) => (
+        <div key={gi} className="py-1">
+          {grp.group !== "-" ? (
+            <h4 className="mb-1 px-4 pt-2 text-sm font-medium text-gray-700 sm:px-6">{grp.group}</h4>
+          ) : null}
+          <GroupTable group={grp} />
         </div>
-      ) : null}
-    </section>
+      ))}
+    </CollapsibleSection>
   );
 }
