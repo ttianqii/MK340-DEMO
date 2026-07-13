@@ -43,6 +43,9 @@ export interface CourseGroup {
 
 export interface Category {
   category: string;
+  // Anchor key from the checklist (G/C/J/E/F). Joins a CourseDetail category to
+  // its row in the /Home/Index credit-summary table.
+  id?: string;
   creditEarned: number | null;
   creditRequired: number | null;
   groups: CourseGroup[];
@@ -153,11 +156,16 @@ function extractUrlToken(returnUrl: string): string | undefined {
 
 /** Fetch and parse the student's course checklist. */
 export async function fetchChecklist(cookies: string, url: string): Promise<ChecklistResult> {
-  const res = await fetch(`${BASE}/Home/CourseDetail?url=${encodeURIComponent(url)}`, {
-    method: "GET",
-    headers: { "User-Agent": USER_AGENT, Cookie: cookies },
-    redirect: "follow",
-  });
+  const headers = { "User-Agent": USER_AGENT, Cookie: cookies };
+  const token = encodeURIComponent(url);
+
+  // CourseDetail carries the full course list; Index carries the authoritative
+  // per-category credit summary + overall total. Fetch both together; Index is
+  // best-effort — if it fails we keep the numbers scraped from CourseDetail.
+  const [res, indexRes] = await Promise.all([
+    fetch(`${BASE}/Home/CourseDetail?url=${token}`, { method: "GET", headers, redirect: "follow" }),
+    fetch(`${BASE}/Home/Index?url=${token}`, { method: "GET", headers, redirect: "follow" }).catch(() => null),
+  ]);
   const html = await res.text();
 
   // A bounced (expired) session lands back on the login form.
@@ -165,7 +173,15 @@ export async function fetchChecklist(cookies: string, url: string): Promise<Chec
     return { ok: false, expired: true };
   }
 
-  return { ok: true, checklist: parseChecklist(html) };
+  const checklist = parseChecklist(html);
+  if (indexRes?.ok && !indexRes.url.includes("/Home/Login")) {
+    try {
+      applySummary(checklist, parseSummary(await indexRes.text()));
+    } catch {
+      /* summary is a progressive enhancement — ignore parse failures */
+    }
+  }
+  return { ok: true, checklist };
 }
 
 // --- HTML parsing (no DOM available on the server) ---------------------------
@@ -251,6 +267,7 @@ function parseCategories(html: string): Category[] {
       const earned = firstText.match(/Credit earned:\s*(\d+)\s*\/\s*(\d+)/i);
       categories.push({
         category: firstText,
+        id: tr.match(/<tr\b[^>]*\bid="([^"]+)"/)?.[1],
         creditEarned: earned ? Number(earned[1]) : null,
         creditRequired: earned ? Number(earned[2]) : null,
         groups: [],
@@ -286,4 +303,70 @@ function parseCategories(html: string): Category[] {
 
 function blankCategory(): Category {
   return { category: "-", creditEarned: null, creditRequired: null, groups: [] };
+}
+
+interface SummaryCategory {
+  id: string;
+  name: string;
+  earned: number;
+  required: number;
+}
+
+interface Summary {
+  categories: SummaryCategory[];
+  totalEarned: number | null;
+  totalRequired: number | null;
+}
+
+// Parse the /Home/Index credit-summary table: one row per หมวดวิชา with an
+// "earned / required" badge and an anchor (…#G/#C/#J/#E/#F) that keys back to
+// the CourseDetail categories, plus a "รวมหน่วยกิต" total row.
+function parseSummary(html: string): Summary {
+  const categories: SummaryCategory[] = [];
+  let totalEarned: number | null = null;
+  let totalRequired: number | null = null;
+
+  for (const [, row] of html.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/g)) {
+    const anchor = row.match(/href="[^"]*#(\w+)"[^>]*>([\s\S]*?)<\/a>/);
+    const badge = row.match(/class="[^"]*badge[^"]*"[^>]*>\s*(\d+)\s*\/\s*(\d+)/);
+    if (anchor && badge) {
+      categories.push({
+        id: anchor[1],
+        name: stripTags(anchor[2]),
+        earned: Number(badge[1]),
+        required: Number(badge[2]),
+      });
+      continue;
+    }
+    // Total row: "รวมหน่วยกิต … 63 / 135" (a <th> pair, no badge/anchor).
+    if (/รวมหน่วยกิต/.test(row)) {
+      const total = row.match(/(\d+)\s*\/\s*(\d+)/);
+      if (total) {
+        totalEarned = Number(total[1]);
+        totalRequired = Number(total[2]);
+      }
+    }
+  }
+
+  return { categories, totalEarned, totalRequired };
+}
+
+// Overlay the Index summary onto the parsed checklist: the summary badges are
+// the authoritative per-category credits, and its total drives the overall
+// progress bar. Match by anchor id first, then by name as a fallback.
+function applySummary(checklist: Checklist, summary: Summary): void {
+  const norm = (s: string) => s.replace(/\s*\(Credit earned:.*\)\s*/i, "").replace(/\s+/g, " ").trim();
+
+  for (const sc of summary.categories) {
+    const target =
+      checklist.categories.find((c) => c.id && c.id === sc.id) ||
+      checklist.categories.find((c) => norm(c.category) === norm(sc.name));
+    if (target) {
+      target.creditEarned = sc.earned;
+      target.creditRequired = sc.required;
+    }
+  }
+
+  if (summary.totalEarned != null) checklist.student.creditsEarned = String(summary.totalEarned);
+  if (summary.totalRequired != null) checklist.student.totalCredits = String(summary.totalRequired);
 }
