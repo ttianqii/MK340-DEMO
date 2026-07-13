@@ -31,24 +31,6 @@ function gradeBadge(grade: string) {
   );
 }
 
-function isPassing(grade: string) {
-  const g = grade.trim().toUpperCase();
-  return g !== "" && g !== "F" && g !== "W" && g !== "I" && g !== "U";
-}
-
-// Group titles carry required credits, e.g. "…ภาษาอังกฤษ (9 หน่วยกิต)".
-// Earned credits are the sum of passing courses. Returns null when the title
-// has no credit figure to compare against.
-function groupProgress(group: CourseGroup) {
-  const required = Number(group.group.match(/\((\d+)\s*หน่วยกิต\)/)?.[1]);
-  if (!required) return null;
-  const earned = group.courses.reduce(
-    (sum, c) => sum + (isPassing(c.grade) ? Number(c.credit) || 0 : 0),
-    0
-  );
-  return { earned, required, pct: Math.min(100, Math.round((earned / required) * 100)) };
-}
-
 function CreditBar({ earned, required, pct }: { earned: number; required: number; pct: number }) {
   return (
     <span className="flex w-full items-center gap-3 sm:w-auto">
@@ -124,22 +106,6 @@ function bucketByPrefix(groups: CourseGroup[]) {
   return buckets;
 }
 
-// Aggregate a prefix bucket's progress across the sub-groups that declare
-// required credits. Null when none do.
-function bucketProgress(groups: CourseGroup[]) {
-  let earned = 0;
-  let required = 0;
-  for (const g of groups) {
-    const p = groupProgress(g);
-    if (p) {
-      earned += p.earned;
-      required += p.required;
-    }
-  }
-  if (!required) return null;
-  return { earned, required, pct: Math.min(100, Math.round((earned / required) * 100)) };
-}
-
 function GroupSection({
   group,
   id,
@@ -153,7 +119,8 @@ function GroupSection({
   defaultOpen?: boolean;
   forceOpen?: boolean;
 }) {
-  const p = groupProgress(group);
+  // Credit totals come only from the authoritative Index summary, which is
+  // per-category — groups carry no trustworthy figure, so no bar here.
   const label = nested ? splitGroupName(group.group).sub : group.group;
   return (
     <CollapsibleSection
@@ -166,7 +133,6 @@ function GroupSection({
           {group.group === "-" ? "Courses" : label || group.group}
         </span>
       }
-      headerRight={p ? <CreditBar {...p} /> : null}
     >
       <GroupTable group={group} />
     </CollapsibleSection>
@@ -201,10 +167,6 @@ export default function CategorySection({
               defaultOpen={defaultOpen}
               forceOpen={forceOpen}
               header={<span className="font-semibold text-gray-900">{bucket.prefix}</span>}
-              headerRight={(() => {
-                const bp = bucketProgress(bucket.groups);
-                return bp ? <CreditBar {...bp} /> : null;
-              })()}
             >
               {bucket.groups.map((grp, gi) => (
                 <GroupSection
