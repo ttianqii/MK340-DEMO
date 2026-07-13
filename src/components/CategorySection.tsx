@@ -31,6 +31,26 @@ function gradeBadge(grade: string) {
   );
 }
 
+function isPassing(grade: string) {
+  const g = grade.trim().toUpperCase();
+  return g !== "" && g !== "F" && g !== "W" && g !== "I" && g !== "U";
+}
+
+// A group's progress toward its required credits, taken from the "(N หน่วยกิต)"
+// in its title. Earned is the sum of passed-course credits, capped at the
+// requirement so an over-subscribed group (e.g. 7×3 credits against a 15-credit
+// requirement) reads 15 / 15, not 21 / 15. Null when the title states no target.
+function groupProgress(group: CourseGroup) {
+  const required = Number(group.group.match(/\((\d+)\s*หน่วยกิต\)/)?.[1]);
+  if (!required) return null;
+  const passed = group.courses.reduce(
+    (sum, c) => sum + (isPassing(c.grade) ? Number(c.credit) || 0 : 0),
+    0
+  );
+  const earned = Math.min(passed, required);
+  return { earned, required, pct: Math.round((earned / required) * 100) };
+}
+
 function CreditBar({ earned, required, pct }: { earned: number; required: number; pct: number }) {
   return (
     <span className="flex w-full items-center gap-3 sm:w-auto">
@@ -119,8 +139,7 @@ function GroupSection({
   defaultOpen?: boolean;
   forceOpen?: boolean;
 }) {
-  // Credit totals come only from the authoritative Index summary, which is
-  // per-category — groups carry no trustworthy figure, so no bar here.
+  const p = groupProgress(group);
   const label = nested ? splitGroupName(group.group).sub : group.group;
   return (
     <CollapsibleSection
@@ -133,6 +152,7 @@ function GroupSection({
           {group.group === "-" ? "Courses" : label || group.group}
         </span>
       }
+      headerRight={p ? <CreditBar {...p} /> : null}
     >
       <GroupTable group={group} />
     </CollapsibleSection>
