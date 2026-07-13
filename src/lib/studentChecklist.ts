@@ -154,33 +154,60 @@ function extractUrlToken(returnUrl: string): string | undefined {
   return returnUrl.match(/[?&]url=([^&]+)/)?.[1];
 }
 
+// The BU server occasionally drops a connection mid-read (ECONNRESET). Fetch
+// the body with a couple of retries and surface the final URL for login checks.
+async function fetchText(
+  url: string,
+  headers: Record<string, string>,
+  attempts = 3
+): Promise<{ finalUrl: string; text: string }> {
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const res = await fetch(url, { method: "GET", headers, redirect: "follow" });
+      return { finalUrl: res.url, text: await res.text() };
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  throw lastErr;
+}
+
 /** Fetch and parse the student's course checklist. */
 export async function fetchChecklist(cookies: string, url: string): Promise<ChecklistResult> {
   const headers = { "User-Agent": USER_AGENT, Cookie: cookies };
   const token = encodeURIComponent(url);
 
-  // CourseDetail carries the full course list; Index carries the authoritative
-  // per-category credit summary + overall total. Fetch both together; Index is
-  // best-effort — if it fails we keep the numbers scraped from CourseDetail.
-  const [res, indexRes] = await Promise.all([
-    fetch(`${BASE}/Home/CourseDetail?url=${token}`, { method: "GET", headers, redirect: "follow" }),
-    fetch(`${BASE}/Home/Index?url=${token}`, { method: "GET", headers, redirect: "follow" }).catch(() => null),
-  ]);
-  const html = await res.text();
+  // CourseDetail carries the full course list. Fetch it first and on its own —
+  // firing it concurrently with the Index request on the same session cookie
+  // was prone to the server resetting one of the connections.
+  let detail: { finalUrl: string; text: string };
+  try {
+    detail = await fetchText(`${BASE}/Home/CourseDetail?url=${token}`, headers);
+  } catch {
+    // Transient network failure (e.g. ECONNRESET) — not an expired session.
+    return { ok: false, expired: false };
+  }
 
   // A bounced (expired) session lands back on the login form.
-  if (res.url.includes("/Home/Login") || /id="myform"/.test(html)) {
+  if (detail.finalUrl.includes("/Home/Login") || /id="myform"/.test(detail.text)) {
     return { ok: false, expired: true };
   }
 
-  const checklist = parseChecklist(html);
-  if (indexRes?.ok && !indexRes.url.includes("/Home/Login")) {
-    try {
-      applySummary(checklist, parseSummary(await indexRes.text()));
-    } catch {
-      /* summary is a progressive enhancement — ignore parse failures */
+  const checklist = parseChecklist(detail.text);
+
+  // Index carries the authoritative per-category credit summary + overall total.
+  // It's a separate, best-effort follow-up: any failure leaves the numbers
+  // already scraped from CourseDetail untouched.
+  try {
+    const index = await fetchText(`${BASE}/Home/Index?url=${token}`, headers, 1);
+    if (!index.finalUrl.includes("/Home/Login")) {
+      applySummary(checklist, parseSummary(index.text));
     }
+  } catch {
+    /* summary is a progressive enhancement — ignore fetch/parse failures */
   }
+
   return { ok: true, checklist };
 }
 
