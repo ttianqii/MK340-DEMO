@@ -31,6 +31,37 @@ function gradeBadge(grade: string) {
   );
 }
 
+function isPassing(grade: string) {
+  const g = grade.trim().toUpperCase();
+  return g !== "" && g !== "F" && g !== "W" && g !== "I" && g !== "U";
+}
+
+// Group titles carry required credits, e.g. "…ภาษาอังกฤษ (9 หน่วยกิต)".
+// Earned credits are the sum of passing courses. Returns null when the title
+// has no credit figure to compare against.
+function groupProgress(group: CourseGroup) {
+  const required = Number(group.group.match(/\((\d+)\s*หน่วยกิต\)/)?.[1]);
+  if (!required) return null;
+  const earned = group.courses.reduce(
+    (sum, c) => sum + (isPassing(c.grade) ? Number(c.credit) || 0 : 0),
+    0
+  );
+  return { earned, required, pct: Math.min(100, Math.round((earned / required) * 100)) };
+}
+
+function CreditBar({ earned, required, pct }: { earned: number; required: number; pct: number }) {
+  return (
+    <span className="flex w-full items-center gap-3 sm:w-auto">
+      <span className="text-sm text-gray-500">
+        {earned} / {required} credits
+      </span>
+      <span className="block h-1.5 w-24 overflow-hidden rounded-full bg-gray-200">
+        <span className="block h-full rounded-full bg-green-500" style={{ width: `${pct}%` }} />
+      </span>
+    </span>
+  );
+}
+
 function CourseRow({ course }: { course: Course }) {
   return (
     <tr className="border-t border-gray-100">
@@ -88,25 +119,27 @@ export default function CategorySection({
   if (!title || title === "-") {
     return (
       <>
-        {category.groups.map((grp, gi) => (
-          <CollapsibleSection
-            key={gi}
-            id={`grp-${gi}-${grp.group.replace(/\W+/g, "-")}`}
-            defaultOpen={defaultOpen}
-            forceOpen={forceOpen}
-            header={<span className="font-semibold text-gray-900">{grp.group === "-" ? "Courses" : grp.group}</span>}
-          >
-            <GroupTable group={grp} />
-          </CollapsibleSection>
-        ))}
+        {category.groups.map((grp, gi) => {
+          const p = groupProgress(grp);
+          return (
+            <CollapsibleSection
+              key={gi}
+              id={`grp-${gi}-${grp.group.replace(/\W+/g, "-")}`}
+              defaultOpen={defaultOpen}
+              forceOpen={forceOpen}
+              header={<span className="font-semibold text-gray-900">{grp.group === "-" ? "Courses" : grp.group}</span>}
+              headerRight={p ? <CreditBar {...p} /> : null}
+            >
+              <GroupTable group={grp} />
+            </CollapsibleSection>
+          );
+        })}
       </>
     );
   }
 
-  const cpct =
-    category.creditRequired && category.creditRequired > 0
-      ? Math.min(100, Math.round(((category.creditEarned || 0) / category.creditRequired) * 100))
-      : null;
+  const cReq = category.creditRequired;
+  const cEarned = category.creditEarned || 0;
 
   return (
     <CollapsibleSection
@@ -115,17 +148,8 @@ export default function CategorySection({
       forceOpen={forceOpen}
       header={<span className="font-semibold text-gray-900">{title}</span>}
       headerRight={
-        category.creditRequired != null ? (
-          <span className="flex w-full items-center gap-3 sm:w-auto">
-            <span className="text-sm text-gray-500">
-              {category.creditEarned} / {category.creditRequired} credits
-            </span>
-            {cpct != null ? (
-              <span className="block h-1.5 w-24 overflow-hidden rounded-full bg-gray-200">
-                <span className="block h-full rounded-full bg-green-500" style={{ width: `${cpct}%` }} />
-              </span>
-            ) : null}
-          </span>
+        cReq != null && cReq > 0 ? (
+          <CreditBar earned={cEarned} required={cReq} pct={Math.min(100, Math.round((cEarned / cReq) * 100))} />
         ) : null
       }
     >
