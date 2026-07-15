@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticate } from "@/lib/studentChecklist";
-import { encryptValue } from "@/lib/serverCrypto";
 import { signSession, SESSION_COOKIE, SESSION_MAX_AGE } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -15,14 +14,11 @@ export async function POST(request: NextRequest) {
 
     const result = await authenticate(username.trim(), password);
 
-    if (!result.ok || !result.url) {
+    if (!result.ok) {
       return NextResponse.json({ message: result.message || "Invalid username or password." }, { status: 401 });
     }
 
-    // Keep the checklist auth cookies (encrypted) so the dashboard can fetch the
-    // student's study plan server-side without asking them to log in again.
-    const ck = result.cookies ? encryptValue(result.cookies) : undefined;
-    const token = await signSession(username.trim(), { url: result.url, ck });
+    const token = await signSession(username.trim());
 
     const response = NextResponse.json({ ok: true, role: "student", redirectTo: "/dashboard" });
     response.cookies.set(SESSION_COOKIE, token, {

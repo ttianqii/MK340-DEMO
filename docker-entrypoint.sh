@@ -1,10 +1,13 @@
 #!/bin/sh
 set -e
 
-# Ensure the SQLite file's directory exists (it lives on a mounted volume).
-DB_FILE="${DATABASE_URL:-/data/sqlite.db}"
-mkdir -p "$(dirname "$DB_FILE")"
+# Bring the schema up to date, then load the demo data (both idempotent —
+# safe to run on every container start), then hand off to the Next.js
+# standalone server.
+node scripts/migrate.mjs
+node scripts/seed-sql.mjs scripts/seed-class-schedule.sql
+if [ -f scripts/seed-demo-students.sql ]; then
+  node scripts/seed-sql.mjs scripts/seed-demo-students.sql
+fi
 
-# Bring the schema up to date, then hand off to the Next.js standalone server.
-DATABASE_URL="$DB_FILE" node migrate.mjs
 exec node server.js

@@ -1,0 +1,132 @@
+openapi: 3.0.3
+info:
+  title: Study Plan — Demo API
+  description: >
+    Local demo build. Login and checklist data are served entirely from this
+    app's own MariaDB database (seeded via `npm run db:seed*`) — no calls to
+    any external/university system are made.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: Local docker-compose app service
+
+tags:
+  - name: auth
+    description: Session-cookie based auth for local demo student accounts
+
+paths:
+  /api/auth/login:
+    post:
+      tags: [auth]
+      summary: Log in with a demo student account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                  example: demo
+                password:
+                  type: string
+                  format: password
+                  example: demo1234
+      responses:
+        "200":
+          description: Login succeeded. Sets the `sp_session` cookie.
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: sp_session=...; HttpOnly; Path=/; SameSite=Lax
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  role:
+                    type: string
+                    example: student
+                  redirectTo:
+                    type: string
+                    example: /dashboard
+        "400":
+          description: Missing username or password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+        "401":
+          description: Invalid username or password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+        "500":
+          description: Unexpected server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+
+  /api/auth/logout:
+    post:
+      tags: [auth]
+      summary: Log out and clear the session cookie
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+
+  /api/auth/me:
+    get:
+      tags: [auth]
+      summary: Get the current session's username/role
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Currently signed-in student
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  username:
+                    type: string
+                    example: demo
+                  role:
+                    type: string
+                    example: student
+        "401":
+          description: Not signed in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: sp_session
+  schemas:
+    Message:
+      type: object
+      properties:
+        message:
+          type: string

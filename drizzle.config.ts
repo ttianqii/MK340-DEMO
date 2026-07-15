@@ -1,13 +1,14 @@
 import { defineConfig } from "drizzle-kit";
 
 export default defineConfig({
-  dialect: "turso",
+  dialect: "mysql",
   schema: "./src/db/schema.ts",
   out: "./drizzle",
   dbCredentials: {
-    // Local dev falls back to a plain SQLite file; set TURSO_DATABASE_URL
-    // (+ TURSO_AUTH_TOKEN) to target the hosted Turso database.
-    url: process.env.TURSO_DATABASE_URL ?? "file:sqlite.db",
-    authToken: process.env.TURSO_AUTH_TOKEN,
+    host: process.env.DB_HOST ?? "localhost",
+    port: Number(process.env.DB_PORT ?? 3306),
+    user: process.env.DB_USER ?? "app",
+    password: process.env.DB_PASSWORD ?? "app",
+    database: process.env.DB_NAME ?? "study_plan",
   },
 });

@@ -1,12 +1,12 @@
 {
   "version": "7",
-  "dialect": "sqlite",
+  "dialect": "mysql",
   "entries": [
     {
       "idx": 0,
-      "version": "6",
-      "when": 1783354125821,
-      "tag": "0000_dazzling_gamma_corps",
+      "version": "5",
+      "when": 1784105511716,
+      "tag": "0000_futuristic_sharon_carter",
       "breakpoints": true
     }
   ]

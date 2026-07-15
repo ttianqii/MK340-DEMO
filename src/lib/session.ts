@@ -6,9 +6,9 @@
 // code works in the proxy (Edge) and in route handlers (Node).
 //
 // A session token is `base64url(payloadJson).base64url(HMAC-SHA256(payloadJson))`.
-// The payload is signed, not encrypted — so tampering is what we guard against,
-// via the signature. Sensitive values (the studentchecklist.bu.ac.th auth
-// cookies) are separately AES-encrypted before being placed in the payload.
+// The payload is signed, not encrypted — tampering is guarded against via the
+// signature. There's nothing else sensitive in the payload: the student's data
+// lives in the local database, keyed by username.
 
 export const SESSION_COOKIE = "sp_session";
 export const SESSION_MAX_AGE = 60 * 60 * 8; // 8 hours, in seconds
@@ -16,17 +16,9 @@ export const SESSION_MAX_AGE = 60 * 60 * 8; // 8 hours, in seconds
 export type Role = "student";
 
 export interface SessionPayload {
-  u: string; // BU username
+  u: string; // username
   role: Role;
   exp: number; // expiry, unix seconds
-  url: string; // the student's studentchecklist url token (identifies their record)
-  ck?: string; // encrypted studentchecklist.bu.ac.th auth cookies — used to fetch the checklist server-side
-}
-
-/** Sensitive, encrypted credentials carried in the session. */
-export interface SessionExtras {
-  url: string;
-  ck?: string;
 }
 
 const encoder = new TextEncoder();
@@ -71,13 +63,11 @@ async function importKey(): Promise<CryptoKey> {
 }
 
 /** Create a signed session token for the given student username. */
-export async function signSession(username: string, extras: SessionExtras): Promise<string> {
+export async function signSession(username: string): Promise<string> {
   const payload: SessionPayload = {
     u: username,
     role: "student",
     exp: Math.floor(Date.now() / 1000) + SESSION_MAX_AGE,
-    url: extras.url,
-    ...(extras.ck ? { ck: extras.ck } : {}),
   };
   const payloadB64 = strToB64url(JSON.stringify(payload));
   const key = await importKey();

@@ -1,11 +1,11 @@
-// Parse a saved URSA room-schedule .cfm page and store its class slots in the
-// SQLite DB via Drizzle.
+// Parse a saved URSA room-schedule .cfm page and store its class slots in
+// MariaDB via Drizzle.
 //
 //   npm run db:seed -- "/path/to/schedule.cfm.html"
 //
 // The URSA pages are served as windows-874 (Thai), so the file is decoded with
 // that charset before parsing. Re-running is safe: the unique slot index makes
-// inserts idempotent.
+// inserts idempotent (INSERT IGNORE skips rows that already exist).
 import { readFileSync } from "node:fs";
 import { db } from "./index";
 import { classSchedule } from "./schema";
@@ -27,11 +27,8 @@ async function main() {
 
   let inserted = 0;
   for (const e of entries) {
-    const res = await db
-      .insert(classSchedule)
-      .values(e)
-      .onConflictDoNothing();
-    inserted += res.rowsAffected;
+    const res = await db.insert(classSchedule).ignore().values(e);
+    inserted += res[0].affectedRows;
   }
 
   const { day, semester, campus } = entries[0];
@@ -41,7 +38,9 @@ async function main() {
   );
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+main()
+  .catch((err) => {
+    console.error(err);
+    process.exitCode = 1;
+  })
+  .finally(() => process.exit());

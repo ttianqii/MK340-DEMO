@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/serverAuth";
-import { decryptValue } from "@/lib/serverCrypto";
 import { fetchChecklist, type Checklist } from "@/lib/studentChecklist";
 import DashboardHeader from "@/components/DashboardHeader";
 import ChecklistCategories from "@/components/ChecklistCategories";
@@ -14,21 +13,16 @@ export default async function DashboardPage() {
   const session = await getSession();
   if (!session) redirect("/login");
 
-  const cookies = session.ck ? decryptValue(session.ck) : null;
-  const result = cookies ? await fetchChecklist(cookies, session.url) : null;
+  const result = await fetchChecklist(session.u);
 
   return (
     <div className="min-h-screen bg-gray-100">
       <DashboardHeader username={session.u} />
 
       <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
-        {!result || !result.ok ? (
+        {!result.ok ? (
           <div className="rounded-md bg-white p-8 text-center shadow">
-            <p className="text-gray-700">
-              {result && !result.ok && result.expired
-                ? "Your checklist session has expired."
-                : "We couldn't load your study plan right now."}
-            </p>
+            <p className="text-gray-700">We couldn&apos;t load your study plan right now.</p>
             <a href="/login" className="mt-4 inline-block text-blue-600 hover:underline">
               Sign in again
             </a>

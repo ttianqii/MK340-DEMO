@@ -1,20 +1,14 @@
 # syntax=docker/dockerfile:1
 
 # ── Builder ───────────────────────────────────────────────────────────────
-# Debian (glibc) base so better-sqlite3 gets a prebuilt binary; build tools
-# are present as a fallback if it has to compile from source.
 FROM node:22-bookworm-slim AS builder
 WORKDIR /app
-
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends python3 make g++ \
-  && rm -rf /var/lib/apt/lists/*
 
 # Install deps against the committed lockfile for reproducible builds.
 COPY package.json package-lock.json ./
 RUN npm ci
 
-# Build the standalone server (traces node_modules, incl. the native binary).
+# Build the standalone server (traces node_modules, incl. mysql2).
 COPY . .
 RUN npm run build
 
@@ -24,8 +18,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production \
     PORT=8080 \
-    HOSTNAME=0.0.0.0 \
-    DATABASE_URL=/data/sqlite.db
+    HOSTNAME=0.0.0.0
 
 # Standalone server + assets. `public` and `.next/static` are not copied into
 # standalone automatically, so add them explicitly.
@@ -33,18 +26,18 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 
-# Migration runner + SQL files, run by the entrypoint before the server boots.
-# Next bundles drizzle-orm into the server chunks, so it is absent from the
-# traced standalone node_modules — copy it back for migrate.mjs (it has no
-# runtime deps of its own; better-sqlite3 is already traced in).
-COPY --from=builder /app/scripts/migrate.mjs ./migrate.mjs
+# Migration/seed runner scripts + SQL files, run by the entrypoint before the
+# server boots. Next bundles drizzle-orm/mysql2 into the server chunks, so
+# they (and mysql2's own dependency tree) are absent from the traced
+# standalone node_modules — bring the full production node_modules back for
+# these standalone scripts instead of hand-picking transitive deps.
+COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/drizzle ./drizzle
-COPY --from=builder /app/node_modules/drizzle-orm ./node_modules/drizzle-orm
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh
 
-# SQLite lives on a mounted volume so data survives container restarts.
-VOLUME /data
+# Data lives in the mariadb container's own volume — nothing to persist here.
 
 EXPOSE 8080
 ENTRYPOINT ["./docker-entrypoint.sh"]

@@ -1,11 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // @libsql/client ships optional native bindings (used for local `file:` and
-  // embedded replicas). Keep it external so the bundler doesn't try to trace
-  // those into the serverless function — Next requires it from node_modules at
-  // runtime, and remote Turso access is pure JS over HTTP.
-  serverExternalPackages: ["@libsql/client"],
+  // The Dockerfile copies .next/standalone into the runner image.
+  output: "standalone",
+  // mysql2 does dynamic requires (auth plugins, optional deps) that the
+  // bundler can't trace statically — keep it external so it's resolved from
+  // node_modules at runtime instead.
+  serverExternalPackages: ["mysql2"],
 };
 
 export default nextConfig;

@@ -1,6 +1,6 @@
-# Build the Next.js + SQLite/Drizzle app as a Docker image and push it to the
-# GitHub Container Registry (GHCR). Deploy the pushed image on any container
-# host that provides a persistent volume at /data for the SQLite file.
+# Build the Next.js + MariaDB/Drizzle app as a Docker image and push it to the
+# GitHub Container Registry (GHCR). Deploy the pushed image alongside a
+# MariaDB instance — see docker-compose.yml for the expected DB_* env vars.
 name: Build and publish Docker image
 
 on:
